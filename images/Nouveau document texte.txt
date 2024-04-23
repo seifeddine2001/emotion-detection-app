@@ -1,0 +1,131 @@
+import os
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator , img_to_array , load_img
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten , Dense , Dropout , BatchNormalization
+from matplotlib import pyplot as plt
+from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+
+
+
+train_dir = '/Users/User/Desktop/Python Project/train'
+test_dir = '/Users/User/Desktop/Python Project/test'
+
+img_width, img_height = 48, 48
+batch_size = 32
+
+train_datagen = ImageDataGenerator(
+    rescale=1./255,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    fill_mode='nearest'
+)
+
+test_datagen = ImageDataGenerator(rescale=1./255)
+
+train_generator = train_datagen.flow_from_directory(
+    train_dir,
+    color_mode='grayscale',
+    target_size=(img_width, img_height),
+    batch_size=batch_size,
+    class_mode='categorical',
+    shuffle=True)
+
+
+
+test_generator = test_datagen.flow_from_directory(
+    test_dir,
+    color_mode='grayscale',
+    target_size=(img_width, img_height),
+    batch_size=batch_size,
+    class_mode='categorical',
+    shuffle=True
+)
+
+
+
+class_labels=['Angry','Disgust', 'Fear', 'Happy','Neutral','Sad','Surprise']
+
+img, label = train_generator.__next__()
+
+import random
+
+i=random.randint(0, (img.shape[0])-1)
+image = img[i]
+labl = class_labels[label[i].argmax()]
+plt.imshow(image[:,:,0], cmap='gray')
+plt.title(labl)
+plt.show()
+
+model = Sequential()
+
+model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(48,48,1)))
+
+model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.1))
+
+model.add(Conv2D(128, kernel_size=(3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.1))
+
+model.add(Conv2D(256, kernel_size=(3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.1))
+
+model.add(Flatten())
+model.add(Dense(512, activation='relu'))
+model.add(Dropout(0.2))
+
+model.add(Dense(7, activation='softmax'))
+
+model.compile(optimizer = 'adam', loss='categorical_crossentropy', metrics=['accuracy'])
+print(model.summary())
+history = model.fit(
+    train_generator,
+    steps_per_epoch=train_generator.samples // batch_size,
+    epochs=50,
+    validation_data=test_generator,
+    validation_steps=test_generator.samples // batch_size
+)
+test_loss, test_acc = model.evaluate(test_generator, verbose=2)
+print('\nTest accuracy:', test_acc)
+image_exp = '/Users/User/Desktop/Python Project/images/happy.jpg'
+img = load_img(image_exp, target_size=(img_width, img_height))
+img_array = img_to_array(img) / 255.0
+img_array = np.expand_dims(img_array, axis=0)
+predictions = model.predict(img_array)
+predicted_class = np.argmax(predictions)
+emotions = ["Angry", "Disgust", "Fear", "Happy", "Sad", "Surprise", "Neutral"]
+predicted_emotion = emotions[predicted_class]
+print("Predicted Emotion:", predicted_emotion)
+model.save('/Users/User/Desktop/Python Project/emotion_model.h5') 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
